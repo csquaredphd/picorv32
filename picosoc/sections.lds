@@ -1,9 +1,9 @@
-#ifdef ICEBREAKER
+#if defined(HX8KDEMO) || defined(UPDUINO2)
 #  define MEM_TOTAL 0x20000 /* 128 KB */
 #elif HX8KDEMO
 #  define MEM_TOTAL 0x200 /* 2 KB */
 #else
-#  error "Set -DICEBREAKER or -DHX8KDEMO when compiling firmware.c"
+#  error "Set -DICEBREAKER, -DUPDUINO2, or -DHX8KDEMO when compiling firmware.c"
 #endif
 
 MEMORY

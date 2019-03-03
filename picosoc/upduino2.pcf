@@ -1,0 +1,18 @@
+set_io ledr_n  41
+set_io ledg_n  40
+set_io ledb_n  39
+
+# to add UART, solder a right-angle Pmod header to the FPGA I/O pins below plus GND and 3.3v and connect a PmodUSBUART module 
+set_io ser_cts_n  23
+set_io ser_rx     25
+set_io ser_tx     26
+set_io ser_rts_n  27
+
+set_io flash_csb  16
+set_io flash_clk  15
+set_io flash_io0  14
+set_io flash_io1  17
+
+# for QSPI mode support, the IO2 (/WP) and IO3 (/HOLD) pins on the flash chip must be soldered to the FPGA I/O pins below
+set_io flash_io2  32
+set_io flash_io3  35

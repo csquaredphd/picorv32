@@ -91,6 +91,53 @@ icebreaker_fw.hex: icebreaker_fw.elf
 icebreaker_fw.bin: icebreaker_fw.elf
 	riscv32-unknown-elf-objcopy -O binary icebreaker_fw.elf icebreaker_fw.bin
 
+# ---- iCE40 UPDuino2 Board ----
+
+upduino2sim: upduino2_tb.vvp upduino2_fw.hex
+	vvp -N $< +firmware=upduino2_fw.hex
+
+upduino2synsim: upduino2_syn_tb.vvp upduino2_fw.hex
+	vvp -N $< +firmware=upduino2_fw.hex
+
+upduino2.blif: upduino2.v ice40up5k_spram.v spimemio.v simpleuart.v picosoc.v ../picorv32.v
+	yosys -ql upduino2.log -p 'synth_ice40 -top upduino2 -blif upduino2.blif' $^
+
+upduino2_tb.vvp: upduino2_tb.v upduino2.v ice40up5k_spram.v spimemio.v simpleuart.v picosoc.v ../picorv32.v spiflash.v
+	iverilog -s testbench -o $@ $^ `yosys-config --datdir/ice40/cells_sim.v`
+
+upduino2_syn_tb.vvp: upduino2_tb.v upduino2_syn.v spiflash.v
+	iverilog -s testbench -o $@ $^ `yosys-config --datdir/ice40/cells_sim.v`
+
+upduino2_syn.v: upduino2.blif
+	yosys -p 'read_blif -wideports upduino2.blif; write_verilog upduino2_syn.v'
+
+upduino2.asc: upduino2.pcf upduino2.blif
+	arachne-pnr -d 5k -P sg48 -o upduino2.asc -p upduino2.pcf upduino2.blif
+
+upduino2.bin: upduino2.asc
+	icetime -d up5k -c 12 -mtr upduino2.rpt upduino2.asc
+	icepack upduino2.asc upduino2.bin
+
+upduino2prog: upduino2.bin upduino2_fw.bin
+	iceprog upduino2.bin
+	iceprog -o 1M upduino2_fw.bin
+
+upduino2prog_fw: upduino2_fw.bin
+	iceprog -o 1M upduino2_fw.bin
+
+upduino2_sections.lds: sections.lds
+	riscv32-unknown-elf-cpp -P -DUPDUINO2 -o $@ $^
+
+upduino2_fw.elf: upduino2_sections.lds start.s firmware.c
+	riscv32-unknown-elf-gcc -DUPDUINO2 -march=rv32ic -Wl,-Bstatic,-T,upduino2_sections.lds,--strip-debug -ffreestanding -nostdlib -o upduino2_fw.elf start.s firmware.c
+
+upduino2_fw.hex: upduino2_fw.elf
+	riscv32-unknown-elf-objcopy -O verilog upduino2_fw.elf upduino2_fw.hex
+
+upduino2_fw.bin: upduino2_fw.elf
+	riscv32-unknown-elf-objcopy -O binary upduino2_fw.elf upduino2_fw.bin
+
+
 # ---- Testbench for SPI Flash Model ----
 
 spiflash_tb: spiflash_tb.vvp firmware.hex
@@ -110,11 +157,15 @@ clean:
 	rm -f testbench.vvp testbench.vcd spiflash_tb.vvp spiflash_tb.vcd
 	rm -f hx8kdemo_fw.elf hx8kdemo_fw.hex hx8kdemo_fw.bin cmos.log
 	rm -f icebreaker_fw.elf icebreaker_fw.hex icebreaker_fw.bin
+	rm -f upduino2_fw.elf upduino2_fw.hex upduino2_fw.bin
 	rm -f hx8kdemo.blif hx8kdemo.log hx8kdemo.asc hx8kdemo.rpt hx8kdemo.bin
 	rm -f hx8kdemo_syn.v hx8kdemo_syn_tb.vvp hx8kdemo_tb.vvp
 	rm -f icebreaker.json icebreaker.log icebreaker.asc icebreaker.rpt icebreaker.bin
 	rm -f icebreaker_syn.v icebreaker_syn_tb.vvp icebreaker_tb.vvp
+	rm -f upduino2.blif upduino2.log upduino2.asc upduino2.rpt upduino2.bin
+	rm -f upduino2_syn.v upduino2_syn_tb.vvp upduino2_tb.vvp
 
 .PHONY: spiflash_tb clean
 .PHONY: hx8kprog hx8kprog_fw hx8ksim hx8ksynsim
 .PHONY: icebprog icebprog_fw icebsim icebsynsim
+.PHONY: upduino2prog upduino2prog_fw upduino2sim upduino2synsim
